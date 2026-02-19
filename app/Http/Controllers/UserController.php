@@ -24,7 +24,7 @@ class UserController extends Controller
             $query->where('email', 'like', '%' . $request->email . '%');
         }
 
-        return response()->json($query->paginate(10));
+        return response()->json($query->get());
     }
 
     public function store(Request $request)
@@ -104,3 +104,103 @@ class UserController extends Controller
         return response()->json(['message' => 'El usuario no estaba eliminado.']);
     }
 }
+/*
+1. Crear el Modelo y la Migración de Libros
+Ejecuta el comando:
+
+php artisan make:model Book -m
+
+En el archivo de migración generado en database/migrations/, define la estructura de la tabla books:
+
+PHP
+Schema::create('books', function (Illuminate\Database\Schema\Blueprint $table) {
+    $table->id();
+    $table->string('title');
+    $table->text('description');
+    $table->string('isbn')->unique();
+    $table->integer('total_copies');
+    $table->integer('available_copies');
+    $table->boolean('status')->default(true); // true = disponible [cite: 36]
+    $table->timestamps();
+});
+2. Crear el Modelo y la Migración de Préstamos
+Ejecuta el comando:
+
+php artisan make:model Loan -m
+
+En la migración de loans, define los campos para el registro:
++1
+
+PHP
+Schema::create('loans', function (Illuminate\Database\Schema\Blueprint $table) {
+    $table->id();
+    $table->string('applicant_name');
+    $table->timestamp('loan_date');
+    $table->timestamp('return_date')->nullable(); // Para el flujo de devolución [cite: 58]
+    $table->foreignId('book_id')->constrained('books')->onDelete('cascade');
+    $table->timestamps();
+});
+3. Configurar el BookFactory
+Genera el factory:
+
+php artisan make:factory BookFactory
+
+En database/factories/BookFactory.php, usa Faker para generar los 90 libros aleatorios:
++1
+
+PHP
+public function definition(): array
+{
+    $total = $this->faker->numberBetween(1, 10);
+    return [
+        'title' => $this->faker->sentence(3),
+        'description' => $this->faker->paragraph(),
+        'isbn' => $this->faker->isbn13(),
+        'total_copies' => $total,
+        'available_copies' => $total, // Regla: no exceder copias totales [cite: 37]
+        'status' => true,
+    ];
+}
+4. Configurar el Seeder (Carga Manual + Automática)
+En database/seeders/DatabaseSeeder.php, debes integrar los 10 clásicos del CSV y los 90 del Factory.
+
+PHP
+public function run(): void
+{
+    // 1. Carga Manual (10 clásicos)
+    $csvFile = database_path('data/books_classics.csv');
+    if (file_exists($csvFile)) {
+        $handle = fopen($csvFile, 'r');
+        fgetcsv($handle); // Saltar encabezado
+        while (($data = fgetcsv($handle)) !== FALSE) {
+            \App\Models\Book::create([
+                'title' => $data[0],
+                'description' => $data[1],
+                'isbn' => $data[2],
+                'total_copies' => (int)$data[3],
+                'available_copies' => (int)$data[4],
+                'status' => strtolower($data[5]) === 'disponible',
+            ]);
+        }
+        fclose($handle);
+    }
+
+    // 2. Carga Automática (90 libros restantes) [cite: 24]
+    \App\Models\Book::factory(90)->create();
+}
+5. Definir Relaciones Eloquent (Para el Punto Extra)
+En el modelo app/Models/Book.php, añade la relación con préstamos:
++1
+
+PHP
+public function loans() {
+    return $this->hasMany(Loan::class);
+}
+Y en app/Models/Loan.php:
+
+PHP
+public function book() {
+    return $this->belongsTo(Book::class);
+}
+
+Siguiente paso recomendado: Una vez que termines esto, corre php artisan migrate --seed y confirma que la tabla tenga exactamente 100 registros. ¿Quieres que te ayude a verificar el código del Seeder para leer el CSV?
