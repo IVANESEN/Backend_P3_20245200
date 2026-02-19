@@ -105,62 +105,7 @@ class UserController extends Controller
     }
 }
 /*
-1. Crear el Modelo y la Migración de Libros
-Ejecuta el comando:
 
-php artisan make:model Book -m
-
-En el archivo de migración generado en database/migrations/, define la estructura de la tabla books:
-
-PHP
-Schema::create('books', function (Illuminate\Database\Schema\Blueprint $table) {
-    $table->id();
-    $table->string('title');
-    $table->text('description');
-    $table->string('isbn')->unique();
-    $table->integer('total_copies');
-    $table->integer('available_copies');
-    $table->boolean('status')->default(true); // true = disponible [cite: 36]
-    $table->timestamps();
-});
-2. Crear el Modelo y la Migración de Préstamos
-Ejecuta el comando:
-
-php artisan make:model Loan -m
-
-En la migración de loans, define los campos para el registro:
-+1
-
-PHP
-Schema::create('loans', function (Illuminate\Database\Schema\Blueprint $table) {
-    $table->id();
-    $table->string('applicant_name');
-    $table->timestamp('loan_date');
-    $table->timestamp('return_date')->nullable(); // Para el flujo de devolución [cite: 58]
-    $table->foreignId('book_id')->constrained('books')->onDelete('cascade');
-    $table->timestamps();
-});
-3. Configurar el BookFactory
-Genera el factory:
-
-php artisan make:factory BookFactory
-
-En database/factories/BookFactory.php, usa Faker para generar los 90 libros aleatorios:
-+1
-
-PHP
-public function definition(): array
-{
-    $total = $this->faker->numberBetween(1, 10);
-    return [
-        'title' => $this->faker->sentence(3),
-        'description' => $this->faker->paragraph(),
-        'isbn' => $this->faker->isbn13(),
-        'total_copies' => $total,
-        'available_copies' => $total, // Regla: no exceder copias totales [cite: 37]
-        'status' => true,
-    ];
-}
 4. Configurar el Seeder (Carga Manual + Automática)
 En database/seeders/DatabaseSeeder.php, debes integrar los 10 clásicos del CSV y los 90 del Factory.
 
